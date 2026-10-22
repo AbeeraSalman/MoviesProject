@@ -58,9 +58,36 @@ def print_movie():
     movie = Movie("tt0000001", "short", "The Movie", 2020, 120,
                   ["Action", "Short"], 7.5, 1000)
     print(movie)
+    
+class MovieParser:
+       def __init__(self,file_path:str):
+           self.file_path=file_path
+               
+       def parse(self)->list[Movie]:
+            with open(self.file_path, 'r', encoding='utf-8',newLine="") as file:
+                reader=csv.DictReader(file)
+                movies=[]
+                for row in reader:
+                    movie=Movie(
+                        movie_id=row['id'],
+                        title_type=row['titleType'],
+                        original_title=row['originalTitle'],
+                        start_year=to_int(row['startYear']),
+                        runtime=to_int(row['runtimeMinutes']),
+                        genres=to_genres(row['genres']),
+                        rating=to_float(row['rating']),
+                        num_votes=to_int(row['numVotes'])
+                    )
+                    movies.append(movie)
+                    
+                    return movies
 
 
 print(to_int("45"), to_int("\\N"), to_int("abc"))
 print(to_float("5.9"), to_float("\\N"))
 print(to_genres("Comedy,Short"), to_genres("\\N"))
 print_movie()
+
+
+movie_parse=MovieParser("movies.csv")
+print
