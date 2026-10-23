@@ -1,23 +1,7 @@
-# Environment variable: MOVIES_FILE_PATH
 
-# Movie: holds the information of one movie (8 attributes).
-# MovieParser: reads the CSV file and returns a list of Movie objects.
-# MovieAnalyzer: takes the movies and calculates the results.
-# ReportPrinter: prints the results of each report.
-# Argument helper: reads and validates the flags -r, -g, -y.
-# Environment helper: reads and validates the file path.
-# main: connects all the pieces and runs the program.
-
-# Results dataclasses:
-# Report 1 (-r, takes a year):
-#   highest movie, lowest movie, average runtime
-# Report 2 (-g, takes a genre):
-#   movie count, mean rating
-# Report 3 (-y, takes a year):
-#   list of up to ten movies, votes each circle stands for
-
-# id,titleType,originalTitle,startYear,runtimeMinutes,genres,rating,numVotes
 import csv
+import math
+import statistics
 from dataclasses import dataclass
 from typing import Optional
 
@@ -48,46 +32,76 @@ def to_float(value: str) -> Optional[float]:
         return None
 
 
-def to_genres(genre_str:str)->list[str]:
+def to_genres(genre_str: str) -> list[str]:
     if genre_str == "\\N":
         return []
     return genre_str.split(",")
 
 
-def print_movie():
-    movie = Movie("tt0000001", "short", "The Movie", 2020, 120,
-                  ["Action", "Short"], 7.5, 1000)
-    print(movie)
-    
 class MovieParser:
-       def __init__(self,file_path:str):
-           self.file_path=file_path
-               
-       def parse(self)->list[Movie]:
-            with open(self.file_path, 'r', encoding='utf-8',newLine="") as file:
-                reader=csv.DictReader(file)
-                movies=[]
-                for row in reader:
-                    movie=Movie(
-                        movie_id=row['id'],
-                        title_type=row['titleType'],
-                        original_title=row['originalTitle'],
-                        start_year=to_int(row['startYear']),
-                        runtime=to_int(row['runtimeMinutes']),
-                        genres=to_genres(row['genres']),
-                        rating=to_float(row['rating']),
-                        num_votes=to_int(row['numVotes'])
-                    )
-                    movies.append(movie)
-                    
-                    return movies
+    def __init__(self, file_path: str):
+        self.file_path = file_path
+
+    def parse(self) -> list[Movie]:
+        movies = []
+        with open(self.file_path, encoding="utf-8", newline="") as file:
+            reader = csv.DictReader(file)
+            for row in reader:
+                year = to_int(row["startYear"])
+                rating = to_float(row["rating"])
+                votes = to_int(row["numVotes"])
+                if year is None or rating is None or votes is None:
+                    continue
+                movie = Movie(
+                    movie_id=row["id"],
+                    title_type=row["titleType"],
+                    original_title=row["originalTitle"],
+                    start_year=year,
+                    runtime=to_int(row["runtimeMinutes"]),
+                    genres=to_genres(row["genres"]),
+                    rating=rating,
+                    num_votes=votes,
+                )
+                movies.append(movie)
+        return movies
+    
+    
+@dataclass
+class YearRatingResult:
+    highest: Movie
+    lowest: Movie
+    average_runtime: Optional[float]
 
 
-print(to_int("45"), to_int("\\N"), to_int("abc"))
-print(to_float("5.9"), to_float("\\N"))
-print(to_genres("Comedy,Short"), to_genres("\\N"))
-print_movie()
+@dataclass
+class GenreResult:
+    movie_count: int
+    mean_rating: float
 
 
-movie_parse=MovieParser("movies.csv")
-print
+@dataclass
+class TopVotesResult:
+    top_movies: list[Movie]
+    votes_per_circle: int
+    
+        
+class MovieAnalyzer:
+    def __init__(self, movies: list[Movie]):
+        self.movies = movies
+
+    def year_rating_report(self, year: int) -> Optional[YearRatingResult]:
+        filtered_movies = [
+            movie for movie in self.movies if movie.start_year == year
+        ]
+
+        if not filtered_movies:
+            return None
+    
+        highest = max(filtered_movies, key=lambda m: m.rating)
+        lowest = min(filtered_movies, key=lambda m: m.rating)
+       
+        average_runtime = statistics.mean(runtimes) if runtimes else None
+      
+        return YearRatingResult(highest, lowest, average_runtime)
+    
+    
