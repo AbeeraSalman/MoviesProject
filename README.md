@@ -1,8 +1,12 @@
 # Movie Report Generator
 
-A command-line tool that reads a CSV of movies and prints simple reports:
-rating extremes and average runtime for a year, movie count and mean rating
-for a genre, and a text bar chart of the top ten movies by votes for a year.
+A command-line tool that reads a CSV file of movies and prints reports:
+
+1. **Year rating report (`-r`)**: highest-rated movie, lowest-rated movie, and average runtime for a year.
+2. **Genre report (`-g`)**: number of movies and mean rating for a genre.
+3. **Top votes report (`-y`)**: the ten most-voted movies of a year, with a `●` bar for each.
+
+Several reports can be requested in one command.
 
 ## Requirements
 
@@ -13,57 +17,91 @@ for a genre, and a text bar chart of the top ten movies by votes for a year.
 
 | File | Purpose |
 |------|---------|
-| `movies_parser.py` | Entry point (`main()`); wires everything together |
-| `cli.py` | Argument parsing, year/genre validation, file-path lookup |
-| `csv_parser.py` | `MovieParser`: reads the CSV and skips invalid rows |
-| `models.py` | `Movie` and report-result dataclasses |
-| `analyzer.py` | `MovieAnalyzer`: year, genre and top-votes calculations |
-| `report_printer.py` | `ReportPrinter`: formats results for the terminal |
-| `movies.csv` | Sample data set |
+| `main.py` | Entry point: `main()` connects all the pieces |
+| `cli.py` | Command-line arguments, year/genre validation, file-path lookup |
+| `csv_parser.py` | Converters and `MovieParser` (reads the CSV into `Movie` objects) |
+| `models.py` | `Movie` and the result dataclasses |
+| `analyzer.py` | `MovieAnalyzer`: calculates the results of each report |
+| `report_printer.py` | `ReportPrinter`: prints the results |
+
+Each file has one job: parse, calculate, and print are kept separate.
 
 ## Data format
 
-CSV with this header:
+The CSV must have this header:
 
 ```
 id,titleType,originalTitle,startYear,runtimeMinutes,genres,rating,numVotes
 ```
 
-- `genres` is comma-separated; `\N` means no genres.
-- Rows with a missing/invalid year, rating (outside 0–10) or vote count are skipped.
-- `runtimeMinutes` is optional; missing values are ignored in the average.
+- `\N` means a missing value.
+- `genres` holds several genres separated by commas, for example `Comedy,Short`.
+- Rows with a missing or invalid year, rating, or vote count are skipped.
+- A missing `runtimeMinutes` is allowed and is ignored in the average.
+- The file is read as UTF-8.
 
-## Usage
+## Setup
 
-Set the `MOVIES_FILE_PATH` environment variable to the CSV, then run with at
-least one option:
+The CSV path is read from the `MOVIES_FILE_PATH` environment variable.
+The variable lasts only for the current terminal window.
+
+Windows (PowerShell):
 
 ```powershell
 $env:MOVIES_FILE_PATH = "movies.csv"
-python movies_parser.py -r 1900 -g Drama -y 1900
 ```
 
-| Option | Description |
-|--------|-------------|
-| `-r YEAR` | Highest/lowest rated movie and average runtime for the year |
-| `-g GENRE` | Number of movies and mean rating for the genre (case-insensitive) |
-| `-y YEAR` | Top ten movies by votes for the year, with a `●` bar per vote chunk |
+Mac / Linux:
 
-Options can be combined. Years must be between 1894 and 1912.
+```bash
+export MOVIES_FILE_PATH=movies.csv
+```
+
+## Usage
+
+```
+python main.py -r 1903
+python main.py -g Comedy
+python main.py -y 1892
+python main.py -r 1903 -g Comedy -y 1892
+```
+
+| Option | Value | Report |
+|--------|-------|--------|
+| `-r` | year | highest rating, lowest rating, average runtime |
+| `-g` | genre (not case-sensitive) | movie count and mean rating |
+| `-y` | year | top ten movies by votes, with circles |
+
+At least one option is required.
+
+## Top votes chart
+
+`votes_per_circle` is the top movie's votes divided by 80, rounded up, so a
+bar never has more than 80 circles. Every movie gets
+`round(votes / votes_per_circle)` circles, followed by its vote count.
 
 ## Example output
 
 ```
-Highest Rated Movie: <title> - 8.1
-Lowest Rated Movie: <title> - 3.2
-Average Runtime: 12.3 minutes
-
-Drama Genre Report:
-Total Movies: 42
-Average Rating: 6.4
+Highest rating: 6.9 - Le fiancé ensorcelé
+Lowest rating: 4.3 - Compagnons de voyage encombrants
+Average mean minutes: 2.4
+Movies found: 386
+Average mean rating: 5.6
+Pauvre Pierrot  ● ● ● ● ● ● ● ● ● ● ● ● ● ● ● ● ● ● ● ● ● ● ● ● ● ● ● ● ● ● ● ● ● ● ● ● ● ● ● ● ● ● ● ● ● ● ● ● ● ● ● ● ● ● ● ● ● ● ● ● ● ● ● ● ● ● ● ● ● ● ● ● ● ● ● ● 1363
 ```
+
+The numbers depend on the CSV file you use.
+
+## Error handling
+
+- No option given, or an unknown option: the program stops and shows the usage message.
+- An invalid value for one option (a non-integer year, a year outside 1894-1912, an invalid genre): an error is printed for that option only. The other valid reports still run.
+- If any option had an error, the program ends with exit code 1.
+- Missing `MOVIES_FILE_PATH`, a missing file, or an unreadable file: the program stops with a short message.
+- A year or genre with no movies prints "No movies found".
 
 ## Known limitations
 
-- Year range is hard-coded in `cli.py` (`MIN_YEAR`/`MAX_YEAR`).
+- The year range (`MIN_YEAR` and `MAX_YEAR`) is hard-coded in `cli.py`.
 - No automated tests yet.
