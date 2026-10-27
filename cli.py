@@ -1,65 +1,51 @@
-
 import argparse
 import os
 
 MIN_YEAR = 1894
-MAX_YEAR = 2022
+MAX_YEAR = 1912
 
 
-def year_type(value: str) -> int:
+def validate_year(value: str) -> tuple[int | None, str | None]:
     try:
         year = int(value)
     except ValueError:
-        raise argparse.ArgumentTypeError(
-            f"{value} is not a valid integer."
-        )
+        return None, f"'{value}' is not a valid integer."
 
     if year < MIN_YEAR or year > MAX_YEAR:
-        raise argparse.ArgumentTypeError(
+        return None, (
             f"Invalid year: {year}. "
             f"Year must be between {MIN_YEAR} and {MAX_YEAR}."
         )
 
-    return year
+    return year, None
 
 
-def genre_type(value: str) -> str:
+def validate_genre(value: str) -> tuple[str | None, str | None]:
     genre = value.strip()
 
     if not genre or not genre.replace("-", "").isalpha():
-        raise argparse.ArgumentTypeError(
-            f"'{value}' is not a valid genre."
-        )
+        return None, f"'{value}' is not a valid genre."
 
-    return genre
+    return genre, None
 
 
 def get_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(
-        description="Movie Report Generator"
-    )
-
+    parser = argparse.ArgumentParser(description="Movie Report Generator")
     parser.add_argument(
         "-r",
-        type=year_type,
         metavar="YEAR",
-        help="highest/lowest rating and average runtime for a year"
+        help="highest/lowest rating and average runtime for a year",
     )
-
     parser.add_argument(
         "-g",
-        type=genre_type,
         metavar="GENRE",
-        help="movie count and mean rating for a genre"
+        help="movie count and mean rating for a genre",
     )
-
     parser.add_argument(
         "-y",
-        type=year_type,
         metavar="YEAR",
-        help="top ten movies by votes for a year"
+        help="top ten movies by votes for a year",
     )
-
     args = parser.parse_args()
     if args.r is None and args.g is None and args.y is None:
         parser.error("provide at least one of -r, -g, -y")
@@ -73,8 +59,3 @@ def get_file_path() -> str:
     if not os.path.isfile(path):
         raise SystemExit(f"File not found: {path}")
     return path
-
-
-if __name__ == "__main__":
-    print(get_args())
-    print(get_file_path())
