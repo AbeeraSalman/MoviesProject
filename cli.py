@@ -1,7 +1,7 @@
 import argparse
 import os
 
-MIN_YEAR = 1894
+MIN_YEAR = 1892
 MAX_YEAR = 1912
 
 
